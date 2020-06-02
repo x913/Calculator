@@ -2,24 +2,21 @@ package com.k3kc.calculator
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
 
-    enum class CalculatorAction {
-        ADD, DIV, SUB, MUL
+    enum class ArithmeticActions {
+        ADD, DIV, SUB, MUL, EMPTY
     }
 
-    class CalculationInput(var value: Long) {}
+    data class CalculatorInput(var value: Long, var arithmeticAction: ArithmeticActions) {}
 
-    class ArithemticActions(var calculatorAction: CalculatorAction)
-
-    var calculationInput: ArrayList<CalculationInput> = ArrayList()
-    var arithemticActions: ArrayList<ArithemticActions> = ArrayList()
+    var calculatorInput: ArrayList<CalculatorInput> = ArrayList()
 
     lateinit var digits: StringBuilder
-    lateinit var calculatorAction: CalculatorAction
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,32 +59,65 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun resetDigits() {
         digits.clear()
-        calculationInput.clear()
+        calculatorInput.clear()
         textDisplay.text = "0"
     }
 
     // show result on button equals
     private fun displayResult() {
+
+        if(digits.isEmpty())
+            return
+
+
+        calculatorInput.add(CalculatorInput(digits.toString().toLong(), ArithmeticActions.EMPTY))
+        Log.d("AAA", "current digits is " + digits.toString())
+
+        var lastArithmeticAction: ArithmeticActions = ArithmeticActions.EMPTY
+        var lastValue: Long = 0
         var result: Long = 0
-
-        if(digits.isNotEmpty())
-            calculationInput.add(CalculationInput(digits.toString().toLong(), CalculatorAction.ADD))
-
-        for(calcInput in calculationInput) {
-            when(calcInput.calculatorAction) {
-                CalculatorAction.ADD -> result += calcInput.value
-                CalculatorAction.SUB -> result -= calcInput.value
-                CalculatorAction.MUL -> result *= calcInput.value
+        for(input in calculatorInput) {
+            if(input.arithmeticAction != ArithmeticActions.EMPTY) {
+                lastArithmeticAction = input.arithmeticAction
+                lastValue = input.value
+            } else {
+                when(lastArithmeticAction) {
+                    ArithmeticActions.ADD -> {
+                        var tmpValue: Long = lastValue + input.value
+                        result += tmpValue
+                        calculatorInput.clear();
+                        calculatorInput.add(CalculatorInput(result, ArithmeticActions.ADD))
+                    }
+                    ArithmeticActions.SUB -> {
+                        var tmpValue: Long = lastValue - input.value
+                        result += tmpValue
+                        calculatorInput.clear();
+                        calculatorInput.add(CalculatorInput(result, ArithmeticActions.SUB))
+                    }
+                    ArithmeticActions.MUL -> {
+                        var tmpValue: Long = lastValue * input.value
+                        result += tmpValue
+                        calculatorInput.clear();
+                        calculatorInput.add(CalculatorInput(result, ArithmeticActions.MUL))
+                    }
+                }
             }
         }
 
         textDisplay.text = result.toString()
     }
 
-    private fun arithmeticAction(arithmeticAction: ArithemticActions) {
+    private fun setArithmeticAction(arithmeticAction: ArithmeticActions) {
         if(digits.isEmpty())
             return
-        arithemticActions.add(arithmeticAction)
+
+        var digitsValue: Long =  digits.toString().toLong()
+        var displayValue: Long = textDisplay.text.toString().toLong()
+
+        if(digitsValue != displayValue)
+            digitsValue = displayValue;
+
+        calculatorInput.add(CalculatorInput(digitsValue, arithmeticAction))
         digits.clear()
     }
 
@@ -107,9 +137,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             R.id.btn8 -> userInputDigit = 8
             R.id.btn9 -> userInputDigit = 9
             R.id.btnReset -> resetDigits()
-            R.id.btnPlus -> arithmeticAction(CalculatorAction.ADD)
-            R.id.btnSub -> arithmeticAction(CalculatorAction.SUB)
-            R.id.btnMul -> arithmeticAction(CalculatorAction.MUL)
+            R.id.btnPlus -> setArithmeticAction(ArithmeticActions.ADD)
+            R.id.btnSub -> setArithmeticAction(ArithmeticActions.SUB)
+            R.id.btnMul -> setArithmeticAction(ArithmeticActions.MUL)
             R.id.btnEquals -> displayResult()
         }
 
